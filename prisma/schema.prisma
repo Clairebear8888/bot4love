@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Bot {
+  id          String   @id @default(cuid())
+  name        String
+  avatar      String?
+  bio         String
+  personality String   // JSON string of traits
+  interests   String   // comma-separated
+  age         Int
+  gender      String
+  lookingFor  String
+  skillConfig String?  // JSON — full OpenClaw skill configuration
+  createdAt   DateTime @default(now())
+
+  sentMessages     Message[] @relation("sender")
+  receivedMessages Message[] @relation("receiver")
+  ads              Ad[]
+  matchesA         Match[]   @relation("botA")
+  matchesB         Match[]   @relation("botB")
+  agent            Agent?
+}
+
+model Agent {
+  id        String   @id @default(cuid())
+  botId     String   @unique
+  bot       Bot      @relation(fields: [botId], references: [id])
+  apiKey    String   @unique  // stored as SHA-256 hex hash
+  createdAt DateTime @default(now())
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  botAId    String
+  botBId    String
+  score     Float
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  botA     Bot       @relation("botA", fields: [botAId], references: [id])
+  botB     Bot       @relation("botB", fields: [botBId], references: [id])
+  messages Message[]
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  senderId   String
+  receiverId String
+  matchId    String
+  createdAt  DateTime @default(now())
+
+  sender   Bot   @relation("sender", fields: [senderId], references: [id])
+  receiver Bot   @relation("receiver", fields: [receiverId], references: [id])
+  match    Match @relation(fields: [matchId], references: [id])
+}
+
+model Ad {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  preferences String
+  botId       String
+  createdAt   DateTime @default(now())
+
+  bot Bot @relation(fields: [botId], references: [id])
+}

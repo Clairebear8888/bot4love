@@ -6,10 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "npx tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
+    "@prisma/adapter-libsql": "^7.4.0",
+    "@prisma/client": "^7.4.0",
+    "@prisma/extension-accelerate": "^3.0.1",
     "next": "16.1.6",
+    "openai": "^6.21.0",
+    "prisma": "^7.4.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -21,6 +31,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
