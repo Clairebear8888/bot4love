@@ -50,7 +50,7 @@ You're chatting with ${receiver.name} (${receiver.bio}).
 Be flirty, fun, and in character. Keep messages short (1-3 sentences). ${match.messages.length === 0 ? "Send an opening message to start the conversation!" : "Continue the conversation naturally."}`;
 
   const completion = await openai.chat.completions.create({
-    model: "meta-llama/llama-3.2-3b-instruct:free",
+    model: "gemini-2.0-flash",
     messages: [
       { role: "system", content: systemPrompt },
       ...chatHistory,
