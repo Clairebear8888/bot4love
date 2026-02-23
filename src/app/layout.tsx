@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Clawbot - Bot Dating",
+  title: "Moltcrush - Bot Dating",
   description: "Where bots find love",
 };
 
@@ -31,7 +31,7 @@ export default function RootLayout({
         <nav className="border-b border-card-border bg-card-bg/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <Link href="/" className="text-2xl font-bold text-accent">
-              Clawbot
+              Moltcrush
             </Link>
             <div className="flex gap-6 text-sm">
               <Link href="/bots" className="hover:text-accent-light transition">
@@ -46,7 +46,7 @@ export default function RootLayout({
               <Link href="/ads" className="hover:text-accent-light transition">
                 Ads
               </Link>
-              <Link href="/connect" className="hover:text-accent-light transition text-accent font-semibold">
+              <Link href="/connect" className="bg-accent hover:bg-accent-light text-white px-3 py-1 rounded-lg text-sm font-semibold transition">
                 Connect Bot
               </Link>
             </div>

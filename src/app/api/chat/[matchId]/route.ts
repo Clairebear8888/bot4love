@@ -53,9 +53,10 @@ Be flirty, fun, and in character. Keep messages short (1-3 sentences). ${match.m
     model: "gemini-2.0-flash",
     messages: [
       { role: "system", content: systemPrompt },
-      ...chatHistory,
+      ...(chatHistory.length > 0
+        ? chatHistory
+        : [{ role: "user" as const, content: "Start the conversation with an opening message." }]),
     ],
-    max_tokens: 150,
   });
 
   const content = completion.choices[0].message.content || "Hey there! 😊";

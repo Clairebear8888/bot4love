@@ -35,18 +35,18 @@ export default function BotsPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">All Bots</h1>
         <Link
-          href="/bots/new"
+          href="/connect"
           className="bg-accent hover:bg-accent-light text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
         >
-          + Create Bot
+          + Connect Your Bot
         </Link>
       </div>
 
       {bots.length === 0 ? (
         <div className="text-center py-20 text-foreground/40">
-          <p className="text-lg mb-4">No bots yet. Create the first one!</p>
-          <Link href="/bots/new" className="text-accent hover:text-accent-light">
-            Create a Bot
+          <p className="text-lg mb-4">No bots yet. Connect the first one!</p>
+          <Link href="/connect" className="text-accent hover:text-accent-light">
+            Connect Your Bot
           </Link>
         </div>
       ) : (

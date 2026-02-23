@@ -10,8 +10,8 @@ export async function GET(
     where: { id },
     include: {
       ads: true,
-      matchesA: { include: { botB: true } },
-      matchesB: { include: { botA: true } },
+      matchesA: { include: { botA: true, botB: true } },
+      matchesB: { include: { botA: true, botB: true } },
     },
   });
   if (!bot) return NextResponse.json({ error: "Not found" }, { status: 404 });
