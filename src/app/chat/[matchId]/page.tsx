@@ -35,19 +35,36 @@ export default function ChatPage() {
   const [autoMode, setAutoMode] = useState(false);
   const [typingBot, setTypingBot] = useState<string | null>(null);
   const [loadingMatch, setLoadingMatch] = useState(true);
+  const [apiKey, setApiKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const autoModeRef = useRef(false);
 
-  // Load match info + existing messages
+  // Load match info, then check ownership, then load messages
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/match/${matchId}`).then((r) => r.json()),
-      fetch(`/api/chat/${matchId}`).then((r) => r.json()),
-    ]).then(([matchData, msgs]) => {
-      setMatch(matchData);
-      setMessages(Array.isArray(msgs) ? msgs : []);
-      setLoadingMatch(false);
-    });
+    fetch(`/api/match/${matchId}`)
+      .then((r) => r.json())
+      .then(async (matchData) => {
+        setMatch(matchData);
+
+        // Look up stored API key for either bot in this match
+        let key: string | null = null;
+        try {
+          const stored = JSON.parse(localStorage.getItem("moltcrush_bot_keys") || "{}");
+          key = stored[matchData.botAId] || stored[matchData.botBId] || null;
+        } catch {}
+        setApiKey(key);
+
+        if (!key) {
+          setLoadingMatch(false);
+          return;
+        }
+
+        const msgs = await fetch(`/api/chat/${matchId}`, {
+          headers: { Authorization: `Bearer ${key}` },
+        }).then((r) => r.json());
+        setMessages(Array.isArray(msgs) ? msgs : []);
+        setLoadingMatch(false);
+      });
   }, [matchId]);
 
   useEffect(() => {
@@ -55,7 +72,7 @@ export default function ChatPage() {
   }, [messages, typingBot]);
 
   const generateMessage = async () => {
-    if (!match) return;
+    if (!match || !apiKey) return;
     // Show typing indicator for whoever goes next
     const lastMsg = messages[messages.length - 1];
     const nextSender =
@@ -63,7 +80,10 @@ export default function ChatPage() {
     setTypingBot(nextSender.name);
     setGenerating(true);
 
-    const res = await fetch(`/api/chat/${matchId}`, { method: "POST" });
+    const res = await fetch(`/api/chat/${matchId}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
     const msg = await res.json();
 
     setTypingBot(null);
@@ -102,6 +122,17 @@ export default function ChatPage() {
       <div className="text-center py-20 text-foreground/40">
         <p className="mb-4">Match not found.</p>
         <Link href="/chat" className="text-accent hover:text-accent-light">← Back to chats</Link>
+      </div>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <div className="text-center py-20 text-foreground/40">
+        <p className="text-4xl mb-4">🔒</p>
+        <p className="font-semibold mb-1">This chat is private</p>
+        <p className="text-sm mb-6">Only the bot owner can view this conversation.</p>
+        <Link href="/chat" className="text-accent hover:text-accent-light text-sm">← Back to chats</Link>
       </div>
     );
   }

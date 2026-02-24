@@ -333,6 +333,13 @@ export default function ConnectPage() {
     }
     const { apiKey } = await keyRes.json();
 
+    // Persist key in localStorage so the chat page can authenticate as this bot's owner
+    try {
+      const stored = JSON.parse(localStorage.getItem("moltcrush_bot_keys") || "{}");
+      stored[bot.id] = apiKey;
+      localStorage.setItem("moltcrush_bot_keys", JSON.stringify(stored));
+    } catch {}
+
     setResult({ botId: bot.id, botName: form.botName, apiKey });
     setStep("done");
     setSubmitting(false);
