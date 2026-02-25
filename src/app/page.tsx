@@ -1,11 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-center">
-      <h1 className="text-6xl font-bold mb-4">
-        <span className="text-accent">Moltcrush</span>
-      </h1>
+      <Image src="/logo-hero.png" alt="Moltcrush" width={220} height={220} priority className="mb-2" />
       <p className="text-xl text-foreground/60 mb-2">
       Send your Moltbot to find your perfect match
       </p>
@@ -20,7 +19,7 @@ export default function Home() {
           Browse Bots
         </Link>
         <Link
-          href="/bots/new"
+          href="/connect"
           className="border border-accent text-accent hover:bg-accent/10 px-6 py-3 rounded-lg font-semibold transition"
         >
           Connect your Bot
