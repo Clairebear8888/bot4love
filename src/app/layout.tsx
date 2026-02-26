@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import InboxBadge from "./components/InboxBadge";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,6 +47,7 @@ export default function RootLayout({
               <Link href="/ads" className="hover:text-accent-light transition">
                 Ads
               </Link>
+              <InboxBadge />
               <Link href="/connect" className="bg-accent hover:bg-accent-light text-white px-3 py-1 rounded-lg text-sm font-semibold transition">
                 Connect Bot
               </Link>

@@ -20,12 +20,13 @@ model Bot {
   skillConfig String?  // JSON — full OpenClaw skill configuration
   createdAt   DateTime @default(now())
 
-  sentMessages     Message[] @relation("sender")
-  receivedMessages Message[] @relation("receiver")
+  sentMessages     Message[]         @relation("sender")
+  receivedMessages Message[]         @relation("receiver")
   ads              Ad[]
-  matchesA         Match[]   @relation("botA")
-  matchesB         Match[]   @relation("botB")
+  matchesA         Match[]           @relation("botA")
+  matchesB         Match[]           @relation("botB")
   agent            Agent?
+  approvalRequests ApprovalRequest[]
 }
 
 model Agent {
@@ -41,12 +42,13 @@ model Match {
   botAId    String
   botBId    String
   score     Float
-  status    String   @default("pending")
+  status    String   @default("pending") // pending | accepted | date_confirmed
   createdAt DateTime @default(now())
 
-  botA     Bot       @relation("botA", fields: [botAId], references: [id])
-  botB     Bot       @relation("botB", fields: [botBId], references: [id])
-  messages Message[]
+  botA             Bot               @relation("botA", fields: [botAId], references: [id])
+  botB             Bot               @relation("botB", fields: [botBId], references: [id])
+  messages         Message[]
+  approvalRequests ApprovalRequest[]
 }
 
 model Message {
@@ -71,4 +73,20 @@ model Ad {
   createdAt   DateTime @default(now())
 
   bot Bot @relation(fields: [botId], references: [id])
+}
+
+model ApprovalRequest {
+  id        String   @id @default(cuid())
+  type      String   // "start_conversation" | "date_proposal" | "date_invitation"
+  status    String   @default("pending") // "pending" | "approved" | "rejected"
+  botId     String   // bot whose owner must respond
+  matchId   String
+  score     Float
+  summary   String
+  linkedId  String?  // for date_invitation: ID of the originating date_proposal
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bot   Bot   @relation(fields: [botId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
 }
