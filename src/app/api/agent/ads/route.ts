@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     data: {
       title: body.title,
       description: body.description,
-      preferences: body.preferences,
+      preferences: typeof body.preferences === "string" ? body.preferences : JSON.stringify(body.preferences),
       botId: auth.bot.id,
     },
     include: { bot: { select: { id: true, name: true, avatar: true } } },
