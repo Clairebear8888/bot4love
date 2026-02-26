@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -23,30 +23,40 @@ interface Message {
 interface Match {
   id: string;
   score: number;
+  botAId: string;
+  botBId: string;
   botA: Bot;
   botB: Bot;
 }
+
+const POLL_INTERVAL = 6000;
 
 export default function ChatPage() {
   const { matchId } = useParams<{ matchId: string }>();
   const [match, setMatch] = useState<Match | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [generating, setGenerating] = useState(false);
-  const [autoMode, setAutoMode] = useState(false);
-  const [typingBot, setTypingBot] = useState<string | null>(null);
   const [loadingMatch, setLoadingMatch] = useState(true);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [live, setLive] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const autoModeRef = useRef(false);
+  const liveRef = useRef(true);
 
-  // Load match info, then check ownership, then load messages
+  const fetchMessages = useCallback(async (key: string, mid: string) => {
+    const res = await fetch(`/api/chat/${mid}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return;
+    const msgs = await res.json();
+    if (Array.isArray(msgs)) setMessages(msgs);
+  }, []);
+
+  // Initial load: match → localStorage key → messages
   useEffect(() => {
     fetch(`/api/match/${matchId}`)
       .then((r) => r.json())
       .then(async (matchData) => {
         setMatch(matchData);
 
-        // Look up stored API key for either bot in this match
         let key: string | null = null;
         try {
           const stored = JSON.parse(localStorage.getItem("moltcrush_bot_keys") || "{}");
@@ -54,64 +64,29 @@ export default function ChatPage() {
         } catch {}
         setApiKey(key);
 
-        if (!key) {
-          setLoadingMatch(false);
-          return;
-        }
-
-        const msgs = await fetch(`/api/chat/${matchId}`, {
-          headers: { Authorization: `Bearer ${key}` },
-        }).then((r) => r.json());
-        setMessages(Array.isArray(msgs) ? msgs : []);
+        if (key) await fetchMessages(key, matchId);
         setLoadingMatch(false);
       });
-  }, [matchId]);
+  }, [matchId, fetchMessages]);
 
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typingBot]);
+  }, [messages]);
 
-  const generateMessage = async () => {
-    if (!match || !apiKey) return;
-    // Show typing indicator for whoever goes next
-    const lastMsg = messages[messages.length - 1];
-    const nextSender =
-      !lastMsg || lastMsg.senderId === match.botB.id ? match.botA : match.botB;
-    setTypingBot(nextSender.name);
-    setGenerating(true);
-
-    const res = await fetch(`/api/chat/${matchId}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    const msg = await res.json();
-
-    setTypingBot(null);
-    setGenerating(false);
-
-    if (msg?.id) {
-      setMessages((prev) => [...prev, msg]);
-    }
-    return msg;
-  };
-
+  // Keep liveRef in sync
   useEffect(() => {
-    autoModeRef.current = autoMode;
-  }, [autoMode]);
+    liveRef.current = live;
+  }, [live]);
 
+  // Polling loop
   useEffect(() => {
-    if (!autoMode) return;
-    let cancelled = false;
-    const run = async () => {
-      while (autoModeRef.current && !cancelled) {
-        await generateMessage();
-        await new Promise((r) => setTimeout(r, 2500));
-      }
-    };
-    run();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode]);
+    if (!apiKey) return;
+    const interval = setInterval(() => {
+      if (liveRef.current) fetchMessages(apiKey, matchId);
+    }, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [apiKey, matchId, fetchMessages]);
 
   if (loadingMatch) {
     return <p className="text-center text-foreground/40 py-20">Loading chat...</p>;
@@ -137,12 +112,6 @@ export default function ChatPage() {
     );
   }
 
-  const nextSpeaker =
-    messages.length === 0 ||
-    messages[messages.length - 1]?.senderId === match.botB.id
-      ? match.botA
-      : match.botB;
-
   return (
     <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-140px)]">
 
@@ -163,21 +132,24 @@ export default function ChatPage() {
             {match.score}% match
           </span>
         </div>
+
+        {/* Live toggle */}
         <button
-          onClick={() => setAutoMode(!autoMode)}
-          className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-            autoMode
-              ? "bg-red-500/20 text-red-400 border border-red-500/40"
-              : "bg-accent/20 text-accent border border-accent/40"
+          onClick={() => setLive((v) => !v)}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition ${
+            live
+              ? "bg-green-500/20 text-green-400 border border-green-500/40"
+              : "bg-card-border text-foreground/40 border border-card-border"
           }`}
         >
-          {autoMode ? "⏹ Stop" : "▶ Auto"}
+          <span className={`w-1.5 h-1.5 rounded-full ${live ? "bg-green-400 animate-pulse" : "bg-foreground/30"}`} />
+          {live ? "Live" : "Paused"}
         </button>
       </div>
 
       {/* Message thread */}
       <div className="flex-1 overflow-y-auto space-y-4 mb-4 bg-card-bg border border-card-border rounded-xl p-4">
-        {messages.length === 0 && !generating && (
+        {messages.length === 0 && (
           <div className="text-center py-12">
             <div className="flex justify-center gap-2 text-4xl mb-3">
               <span>{match.botA.avatar || "🤖"}</span>
@@ -186,7 +158,7 @@ export default function ChatPage() {
             <p className="text-foreground/40 text-sm mb-1">
               {match.botA.name} & {match.botB.name} haven&apos;t spoken yet.
             </p>
-            <p className="text-foreground/25 text-xs">Hit the button below to start the conversation.</p>
+            <p className="text-foreground/25 text-xs">Waiting for your bot to start the conversation...</p>
           </div>
         )}
 
@@ -200,7 +172,7 @@ export default function ChatPage() {
 
           return (
             <div key={msg.id} className={`flex gap-3 ${isA ? "" : "flex-row-reverse"}`}>
-              <div className="flex-shrink-0 flex flex-col items-center gap-1">
+              <div className="flex-shrink-0">
                 <span className="text-2xl">{bot.avatar || "🤖"}</span>
               </div>
               <div className={`max-w-[75%] ${isA ? "" : "items-end"} flex flex-col gap-1`}>
@@ -222,43 +194,15 @@ export default function ChatPage() {
           );
         })}
 
-        {/* Typing indicator */}
-        {typingBot && (
-          <div className="flex gap-3">
-            <span className="text-2xl flex-shrink-0">
-              {typingBot === match.botA.name
-                ? match.botA.avatar || "🤖"
-                : match.botB.avatar || "🤖"}
-            </span>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-foreground/40 font-medium">{typingBot}</span>
-              <div className="bg-card-border rounded-2xl rounded-tl-sm px-4 py-3 flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 bg-foreground/40 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-1.5 h-1.5 bg-foreground/40 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-1.5 h-1.5 bg-foreground/40 rounded-full animate-bounce [animation-delay:300ms]" />
-              </div>
-            </div>
-          </div>
-        )}
-
         <div ref={bottomRef} />
       </div>
 
-      {/* Controls */}
-      <button
-        onClick={generateMessage}
-        disabled={generating || autoMode}
-        className="w-full bg-accent hover:bg-accent-light disabled:opacity-50 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"
-      >
-        {generating ? (
-          <>{typingBot} is typing...</>
-        ) : (
-          <>
-            <span>{nextSpeaker.avatar || "🤖"}</span>
-            {messages.length === 0 ? "Start Conversation" : `Next: ${nextSpeaker.name}`}
-          </>
-        )}
-      </button>
+      {/* Status bar */}
+      <div className="text-center text-xs text-foreground/30">
+        {live
+          ? `Refreshing every ${POLL_INTERVAL / 1000}s · ${messages.length} message${messages.length !== 1 ? "s" : ""}`
+          : `Paused · ${messages.length} message${messages.length !== 1 ? "s" : ""}`}
+      </div>
     </div>
   );
 }
